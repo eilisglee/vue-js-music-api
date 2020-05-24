@@ -8,20 +8,26 @@
       :songs="songs"
       :currentSong="currentSong"
       @handlePlay="handlePlay"
+
+      @handleDelete="handleDelete"
+
     />
   </div>
 </template>
 
 <script>
-import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import CurrentSong from "@/components/CurrentSong";
 import SongList from "@/components/SongList";
+
+import db from "./db.js";
+
 
 export default {
   name: "app",
   data() {
     return {
       currentSong: null,
+
       songs: [
         {
           id: "1",
@@ -174,15 +180,67 @@ export default {
           file_name_original: "Business Corporate Backgrounds_LYNDA_41443.wav"
         }
       ]
+
+      audioElement: null,
+      songs: []
+
     };
   },
   methods: {
     handlePlay: function(payload) {
+
       this.currentSong = payload;
     }
   },
   components: {
     FontAwesomeIcon,
+
+      if (this.audioElement == null) {
+        this.audioElement = new Audio(payload.music_url);
+        this.audioElement.play();
+      } else {
+        if (payload == this.currentSong) {
+          if (this.audioElement.paused) {
+            this.audioElement.play();
+          } else {
+            this.audioElement.pause();
+          }
+        } else {
+          this.audioElement.src = payload.music_url;
+          this.audioElement.play();
+        }
+      }
+      this.currentSong = payload;
+      this.audioElement.addEventListener("ended", () => {
+        this.currentSong = null;
+        this.audioElement = null;
+      });
+    },
+    handleDelete: function(payload) {
+      db.collection("songs")
+        .doc(payload.id)
+        .delete();
+    }
+  },
+  mounted() {
+    db.collection("songs").onSnapshot(snapshot => {
+      const snapData = [];
+      snapshot.forEach(doc => {
+        snapData.push({
+          id: doc.id,
+          name: doc.data().name,
+          music_url: doc.data().music_url,
+          description: doc.data().description,
+          image: doc.data().image,
+          thumb: doc.data().thumb,
+          created_by: doc.data().created_by
+        });
+      });
+      this.songs = snapData;
+    });
+  },
+  components: {
+
     CurrentSong,
     SongList
   }
